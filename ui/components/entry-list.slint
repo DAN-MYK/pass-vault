@@ -25,10 +25,10 @@ export component EntryList inherits Rectangle {
         Rectangle {
             height: 56px;
             background: #0a2540;
-            padding-left: 16px;
-            padding-right: 12px;
 
             HorizontalBox {
+                padding-left: 16px;
+                padding-right: 12px;
                 spacing: 8px;
 
                 Text {
@@ -49,7 +49,6 @@ export component EntryList inherits Rectangle {
                     clicked => { root.lock-requested(); }
                 }
             }
-        }
         }
 
         // ── Пошук ───────────────────────────────────────────────────────────
@@ -74,10 +73,10 @@ export component EntryList inherits Rectangle {
         Rectangle {
             height: 28px;
             background: #0d2d50;
-            padding-left: 16px;
-            padding-bottom: 4px;
 
             VerticalBox {
+                padding-left: 16px;
+                padding-bottom: 4px;
                 Text {
                     text: root.entries.length + " записів";
                     font-size: 11px;

@@ -6,11 +6,10 @@ use zeroize::Zeroizing;
 
 use crate::vault::db::Vault;
 use crate::vault::VaultError;
-use crate::{EntryItem, CategoryItem};
+use crate::CategoryItem;
 
 pub struct AppState {
     pub vault: Arc<Mutex<Option<Vault>>>,
-    pub entries_model: Rc<VecModel<EntryItem>>,
     #[allow(dead_code)] // будуть використані при реалізації категорій
     pub categories_model: Rc<VecModel<CategoryItem>>,
     pub session_key: Arc<Mutex<Option<Zeroizing<Vec<u8>>>>>,
@@ -21,7 +20,6 @@ impl AppState {
     pub fn new() -> Self {
         Self {
             vault: Arc::new(Mutex::new(None)),
-            entries_model: Rc::new(VecModel::default()),
             categories_model: Rc::new(VecModel::default()),
             session_key: Arc::new(Mutex::new(None)),
             all_entries: Arc::new(Mutex::new(Vec::new())),

@@ -1,6 +1,6 @@
+use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use tokio::time;
 
 slint::include_modules!();
 
@@ -21,8 +21,8 @@ fn main() -> Result<(), slint::PlatformError> {
     let state = app::AppState::new();
     let window = AppWindow::new()?;
 
-    // Bind entries model to UI before handlers run
-    window.set_entries(slint::ModelRc::from(state.entries_model.clone()));
+    // Initialize entries model
+    window.set_entries(slint::ModelRc::from(Rc::new(slint::VecModel::<EntryItem>::default())));
 
     // 3. Register all event handlers
     ui::handlers::register_all(&window, &state, rt.clone());
@@ -47,18 +47,18 @@ fn main() -> Result<(), slint::PlatformError> {
                 if !already_locked {
                     *session_key_lock.lock().unwrap() = None;
                     *all_entries_lock.lock().unwrap() = Vec::new();
-                    if let Ok(cb) = arboard::Clipboard::new() {
+                    if let Ok(mut cb) = arboard::Clipboard::new() {
                         let _ = cb.set_text("");
-                        // Keep clipboard alive briefly
+                        // Keep clipboard alive for at least 800ms
                         tokio::spawn(async move {
-                            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                            tokio::time::sleep(std::time::Duration::from_millis(900)).await;
                             drop(cb);
                         });
                     }
-                    // Timer callback is already in event loop — use upgrade(), not upgrade_in_event_loop
+                    // Timer callback is already in event loop — use upgrade()
                     if let Some(ui) = weak_lock.upgrade() {
                         ui.set_is_locked(true);
-                        ui.set_entries(slint::ModelRc::from(std::rc::Rc::new(
+                        ui.set_entries(slint::ModelRc::from(Rc::new(
                             slint::VecModel::<EntryItem>::default(),
                         )));
                         ui.set_selected_entry_id(-1);
@@ -80,11 +80,11 @@ fn main() -> Result<(), slint::PlatformError> {
     let session_key_close = state.session_key.clone();
     window.window().on_close_requested(move || {
         *session_key_close.lock().unwrap() = None;
-        if let Ok(cb) = arboard::Clipboard::new() {
+        if let Ok(mut cb) = arboard::Clipboard::new() {
             let _ = cb.set_text("");
-            // Keep clipboard alive briefly
+            // Keep clipboard alive for at least 800ms
             tokio::spawn(async move {
-                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                tokio::time::sleep(std::time::Duration::from_millis(900)).await;
                 drop(cb);
             });
         }

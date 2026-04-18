@@ -15,3 +15,10 @@ export struct CategoryItem {
     icon: string,
     count: int,
 }
+
+export global AppState {
+    in property <bool> is-locked;
+    in property <string> error-message;
+    in property <bool> is-loading;
+}
+

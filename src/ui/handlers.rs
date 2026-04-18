@@ -4,7 +4,6 @@ use std::time::Duration;
 
 use slint::{ComponentHandle, Model, VecModel};
 use tokio::runtime::Runtime;
-use tokio::time;
 use zeroize::Zeroizing;
 
 use crate::app::AppState;
@@ -306,7 +305,7 @@ fn register_entry_copy_password(ui: &AppWindow, state: &AppState) {
 
         if let Ok(pwd_bytes) = result {
             let pwd = String::from_utf8_lossy(&pwd_bytes).to_string();
-            if let Ok(cb) = arboard::Clipboard::new() {
+            if let Ok(mut cb) = arboard::Clipboard::new() {
                 let _ = cb.set_text(&pwd);
                 // Keep clipboard alive for at least 900ms to avoid "dropped too quickly" warning
                 tokio::spawn(async move {
@@ -316,11 +315,11 @@ fn register_entry_copy_password(ui: &AppWindow, state: &AppState) {
             }
             // Auto-clear after 30 seconds — Timer callback is already in event loop
             slint::Timer::single_shot(Duration::from_secs(30), move || {
-                if let Ok(cb) = arboard::Clipboard::new() {
+                if let Ok(mut cb) = arboard::Clipboard::new() {
                     let _ = cb.set_text("");
-                    // Keep clipboard alive briefly
+                    // Keep clipboard alive for at least 800ms
                     tokio::spawn(async move {
-                        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                        tokio::time::sleep(std::time::Duration::from_millis(900)).await;
                         drop(cb);
                     });
                 }
@@ -385,7 +384,7 @@ fn register_lock_requested(ui: &AppWindow, state: &AppState) {
         // Clear cached entries
         *all_entries.lock().unwrap() = Vec::new();
         // Clear clipboard on lock
-        if let Ok(cb) = arboard::Clipboard::new() {
+        if let Ok(mut cb) = arboard::Clipboard::new() {
             let _ = cb.set_text("");
             // Keep clipboard alive briefly
             tokio::spawn(async move {
