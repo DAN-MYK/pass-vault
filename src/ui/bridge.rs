@@ -1,6 +1,4 @@
-use std::rc::Rc;
-
-use slint::{SharedString, VecModel};
+use slint::SharedString;
 
 use crate::vault::model::Entry;
 use crate::EntryItem;
@@ -29,9 +27,4 @@ pub fn ui_to_entry(item: &EntryItem) -> Entry {
         favorite: item.favorite,
         updated_at: chrono::Utc::now(),
     }
-}
-
-pub fn entries_to_model(entries: &[Entry]) -> Rc<VecModel<EntryItem>> {
-    let items: Vec<EntryItem> = entries.iter().map(entry_to_ui).collect();
-    Rc::new(VecModel::from(items))
 }

@@ -8,7 +8,7 @@ export component EntryList inherits Rectangle {
     in property <bool> is-loading: false;
 
     callback search-changed(string);
-    callback entry-selected(int);   // id
+    callback entry-selected(int);
     callback new-entry-requested();
     callback lock-requested();
 
@@ -17,7 +17,7 @@ export component EntryList inherits Rectangle {
     background: #0f3460;
     min-width: 260px;
 
-    VerticalLayout {
+    VerticalBox {
         padding: 0px;
         spacing: 0px;
 
@@ -26,28 +26,37 @@ export component EntryList inherits Rectangle {
             height: 56px;
             background: #0a2540;
 
+            // Outer box carries zero padding; spacer rects provide the insets.
             HorizontalBox {
-                padding-left: 16px;
-                padding-right: 12px;
-                spacing: 8px;
+                padding: 0px;
+                spacing: 0px;
 
-                Text {
-                    text: "pass-vault";
-                    font-size: 15px;
-                    font-weight: 700;
-                    color: #e0e0e0;
-                    vertical-alignment: center;
+                Rectangle { width: 16px; }           // left inset
+
+                HorizontalBox {
+                    padding: 0px;
+                    spacing: 8px;
                     horizontal-stretch: 1;
+
+                    Text {
+                        text: "pass-vault";
+                        font-size: 15px;
+                        font-weight: 700;
+                        color: #e0e0e0;
+                        vertical-alignment: center;
+                        horizontal-stretch: 1;
+                    }
+                    Button {
+                        text: "+";
+                        clicked => { root.new-entry-requested(); }
+                    }
+                    Button {
+                        text: "🔒";
+                        clicked => { root.lock-requested(); }
+                    }
                 }
 
-                Button {
-                    text: "+";
-                    clicked => { root.new-entry-requested(); }
-                }
-                Button {
-                    text: "🔒";
-                    clicked => { root.lock-requested(); }
-                }
+                Rectangle { width: 12px; }           // right inset
             }
         }
 
@@ -74,9 +83,13 @@ export component EntryList inherits Rectangle {
             height: 28px;
             background: #0d2d50;
 
-            VerticalBox {
-                padding-left: 16px;
-                padding-bottom: 4px;
+            // Left-only indent via spacer rect; text centers naturally.
+            HorizontalBox {
+                padding: 0px;
+                spacing: 0px;
+
+                Rectangle { width: 16px; }           // left inset
+
                 Text {
                     text: root.entries.length + " записів";
                     font-size: 11px;
@@ -125,6 +138,7 @@ export component EntryList inherits Rectangle {
 
                     // Назва + username
                     VerticalBox {
+                        padding: 0px;
                         spacing: 2px;
                         alignment: center;
                         horizontal-stretch: 1;
@@ -168,6 +182,8 @@ export component EntryList inherits Rectangle {
             background: #0d2d50;
 
             VerticalBox {
+                padding: 0px;
+
                 Text {
                     text: "Завантаження...";
                     font-size: 12px;

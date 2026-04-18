@@ -17,8 +17,33 @@ export struct CategoryItem {
 }
 
 export global AppState {
-    in property <bool> is-locked;
-    in property <string> error-message;
-    in property <bool> is-loading;
-}
+    // Session
+    in-out property <bool> is-logged-in: false;
+    in-out property <bool> is-new-vault: false;
+    in-out property <string> current-user: "";
 
+    // Data
+    in-out property <[EntryItem]> entries;
+    in-out property <[CategoryItem]> categories;
+    in-out property <EntryItem> selected-entry;
+    in-out property <int> selected-entry-id: -1;
+    in-out property <string> search-query: "";
+
+    // Operation state
+    in-out property <bool> is-loading: false;
+    in-out property <string> detail-mode: "view";
+    in-out property <string> error-message: "";
+
+    // Callbacks (business operations, wired in handlers.rs)
+    callback login(string);
+    callback logout();
+    callback search-changed(string);
+    callback select-entry(int);
+    callback save-entry(EntryItem);
+    callback delete-entry(int);
+    callback copy-password(int);
+    callback reveal-password(int);
+    callback new-entry-requested();
+    callback generate-password(int, bool, bool, bool, bool) -> string;
+    callback reset-idle-timer();
+}
