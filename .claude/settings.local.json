@@ -4,7 +4,8 @@
       "Bash(cargo check:*)",
       "Bash(wc:*)",
       "Bash(cargo test:*)",
-      "Bash(cargo run:*)"
+      "Bash(cargo run:*)",
+      "Bash(cargo clean *)"
     ]
   }
 }

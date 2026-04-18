@@ -16,7 +16,6 @@ use app::Vault;
 use ui::bridge;
 use vault::{crypto, db::Vault as VaultDb, search, Entry, PasswordOptions, VaultError};
 
-const KDF_SALT: &[u8; 16] = b"pass-vault-salt!";
 const IDLE_LOCK_SECS: u64 = 300;
 const IDLE_CHECK_SECS: u64 = 10;
 const CLIPBOARD_AUTOCLEAR_SECS: u64 = 30;
@@ -173,7 +172,8 @@ fn register_login(
         let _ = slint::spawn_local(async move {
             let outcome = rt
                 .spawn_blocking(move || {
-                    let key = crypto::derive_key(pwd.as_bytes(), KDF_SALT)?;
+                    let salt = VaultDb::load_or_create_salt()?;
+                    let key = crypto::derive_key(pwd.as_bytes(), &salt)?;
                     let vault = VaultDb::open(&key)?;
                     let entries = vault.all_entries()?;
                     Ok::<_, VaultError>((key, vault, entries))

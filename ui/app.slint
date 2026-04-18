@@ -13,129 +13,59 @@ export component AppWindow inherits Window {
     width: 900px;
     height: 600px;
 
-    // --- Стан сесії ---
-    in-out property <bool> is-locked: true;
-    in-out property <bool> is-loading: false;
-    in-out property <string> error-message;
-    in-out property <bool> is-new-vault: false;
-
-    // --- Дані ---
-    in-out property <[EntryItem]> entries;
-    in-out property <[CategoryItem]> categories;
-    in-out property <int> selected-entry-id: -1;
-    in-out property <EntryItem> selected-entry;
-    in-out property <string> search-query;
-
-    // --- UI-стан деталі ---
-    in-out property <string> detail-mode: "view";
+    // ── UI-only state (не бізнес-стан) ──────────────────────────────────────
     in-out property <bool> show-password: false;
-
-    // --- GenerateDialog ---
     in-out property <bool> show-generate-dialog: false;
-    in-out property <string> pending-generated-password: "";
-
-    // --- ConfirmDialog ---
     in-out property <bool> show-confirm-dialog: false;
     in-out property <int> pending-delete-id: -1;
+    in-out property <string> pending-generated-password: "";
 
-    // --- Callbacks: UI → Rust ---
-    callback login(string);
-    callback search-changed(string);
-    callback entry-selected(int);
-    callback entry-save(EntryItem);
-    callback entry-delete(int);
-    callback entry-copy-password(int);
-    callback reveal-password(int);
-    callback lock-requested();
-    callback new-entry-requested();
-    // length, uppercase, digits, symbols, exclude-ambiguous
-    callback generate-password(int, bool, bool, bool, bool) -> string;
-    callback reset-idle-timer();
+    // Bridge: Rust досі викликає ui.set_is_locked(...). Лишаємо як mirror
+    // допоки main.rs не мігрує на AppState.is-logged-in.
+    in-out property <bool> is-locked: true;
+
+    // Скидаємо reveal, коли змінюється вибір або режим.
+    property <int> _sel-id-mirror: AppState.selected-entry-id;
+    changed _sel-id-mirror => { root.show-password = false; }
+
+    property <string> _mode-mirror: AppState.detail-mode;
+    changed _mode-mirror => {
+        if (root._mode-mirror == "new" || root._mode-mirror == "edit") {
+            root.show-password = false;
+        }
+    }
 
     Rectangle {
         background: #0a1628;
 
         // ── Основний layout (розблоковано) ──────────────────────────────────
-        if !root.is-locked: HorizontalBox {
-            entry-list := EntryList {
+        if AppState.is-logged-in: HorizontalBox {
+            EntryList {
                 width: 280px;
-                entries: root.entries;
-                selected-id: root.selected-entry-id;
-                is-loading: root.is-loading;
-
-                search-changed(q) => {
-                    root.search-query = q;
-                    root.search-changed(q);
-                    root.reset-idle-timer();
-                }
-                entry-selected(id) => {
-                    root.show-password = false;
-                    root.entry-selected(id);
-                    root.reset-idle-timer();
-                }
-                new-entry-requested => {
-                    root.selected-entry-id = -1;
-                    root.detail-mode = "new";
-                    root.show-password = false;
-                    root.new-entry-requested();
-                    root.reset-idle-timer();
-                }
-                lock-requested => {
-                    root.lock-requested();
-                }
             }
 
             EntryDetail {
                 horizontal-stretch: 1;
-                entry: root.selected-entry;
-                mode: root.detail-mode;
-                show-password: root.show-password;
-                error-message: root.error-message;
+                show-password <=> root.show-password;
                 accepted-password: root.pending-generated-password;
 
-                save-requested(item) => {
-                    root.entry-save(item);
-                    root.reset-idle-timer();
-                }
                 delete-requested(id) => {
                     root.pending-delete-id = id;
                     root.show-confirm-dialog = true;
-                    root.reset-idle-timer();
-                }
-                copy-password-requested(id) => {
-                    root.entry-copy-password(id);
-                    root.reset-idle-timer();
-                }
-                reveal-password-requested(id) => {
-                    root.show-password = !root.show-password;
-                    root.reveal-password(id);
-                    root.reset-idle-timer();
-                }
-                edit-requested => {
-                    root.detail-mode = "edit";
-                    root.reset-idle-timer();
-                }
-                cancel-requested => {
-                    root.detail-mode = "view";
-                    root.reset-idle-timer();
+                    AppState.reset-idle-timer();
                 }
                 generate-password-requested => {
                     root.pending-generated-password = "";
                     root.show-generate-dialog = true;
-                    root.reset-idle-timer();
+                    AppState.reset-idle-timer();
                 }
             }
         }
 
         // ── Login overlay ───────────────────────────────────────────────────
-        if root.is-locked: LoginDialog {
+        if !AppState.is-logged-in: LoginDialog {
             width: 100%;
             height: 100%;
-            is-new-vault: root.is-new-vault;
-            error-message: root.error-message;
-
-            unlock-requested(pwd) => { root.login(pwd); }
-            create-requested(pwd) => { root.login(pwd); }
         }
 
         // ── GenerateDialog overlay ──────────────────────────────────────────
@@ -144,7 +74,7 @@ export component AppWindow inherits Window {
             height: 100%;
 
             generate-requested(len, upper, digits, symbols, excl) => {
-                root.pending-generated-password = root.generate-password(
+                root.pending-generated-password = AppState.generate-password(
                     len, upper, digits, symbols, excl
                 );
                 return root.pending-generated-password;
@@ -169,7 +99,7 @@ export component AppWindow inherits Window {
 
             confirmed => {
                 root.show-confirm-dialog = false;
-                root.entry-delete(root.pending-delete-id);
+                AppState.delete-entry(root.pending-delete-id);
             }
             cancelled => {
                 root.show-confirm-dialog = false;

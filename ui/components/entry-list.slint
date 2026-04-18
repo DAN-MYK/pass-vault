@@ -1,19 +1,8 @@
 import { LineEdit, ListView, Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
-import { EntryItem } from "../globals.slint";
+import { EntryItem, AppState } from "../globals.slint";
 
-// Ліва панель: пошук + список записів.
+// Ліва панель: пошук + список записів. Читає й пише AppState напряму.
 export component EntryList inherits Rectangle {
-    in property <[EntryItem]> entries;
-    in property <int> selected-id: -1;
-    in property <bool> is-loading: false;
-
-    callback search-changed(string);
-    callback entry-selected(int);
-    callback new-entry-requested();
-    callback lock-requested();
-
-    private property <string> search-text: "";
-
     background: #0f3460;
     min-width: 260px;
 
@@ -26,7 +15,6 @@ export component EntryList inherits Rectangle {
             height: 56px;
             background: #0a2540;
 
-            // Outer box carries zero padding; spacer rects provide the insets.
             HorizontalBox {
                 padding: 0px;
                 spacing: 0px;
@@ -48,11 +36,14 @@ export component EntryList inherits Rectangle {
                     }
                     Button {
                         text: "+";
-                        clicked => { root.new-entry-requested(); }
+                        clicked => {
+                            AppState.new-entry-requested();
+                            AppState.reset-idle-timer();
+                        }
                     }
                     Button {
                         text: "🔒";
-                        clicked => { root.lock-requested(); }
+                        clicked => { AppState.logout(); }
                     }
                 }
 
@@ -71,8 +62,9 @@ export component EntryList inherits Rectangle {
                 LineEdit {
                     placeholder-text: "Пошук...";
                     edited(text) => {
-                        root.search-text = text;
-                        root.search-changed(text);
+                        AppState.search-query = text;
+                        AppState.search-changed(text);
+                        AppState.reset-idle-timer();
                     }
                 }
             }
@@ -83,7 +75,6 @@ export component EntryList inherits Rectangle {
             height: 28px;
             background: #0d2d50;
 
-            // Left-only indent via spacer rect; text centers naturally.
             HorizontalBox {
                 padding: 0px;
                 spacing: 0px;
@@ -91,7 +82,7 @@ export component EntryList inherits Rectangle {
                 Rectangle { width: 16px; }           // left inset
 
                 Text {
-                    text: root.entries.length + " записів";
+                    text: AppState.entries.length + " записів";
                     font-size: 11px;
                     color: #6688aa;
                     vertical-alignment: center;
@@ -103,23 +94,26 @@ export component EntryList inherits Rectangle {
         ListView {
             vertical-stretch: 1;
 
-            for entry in root.entries: Rectangle {
+            for entry in AppState.entries: Rectangle {
                 height: 64px;
-                background: entry.id == root.selected-id
+                background: entry.id == AppState.selected-entry-id
                     ? #1a4a7a
                     : (touch.has-hover ? #143d68 : transparent);
 
                 animate background { duration: 100ms; }
 
                 touch := TouchArea {
-                    clicked => { root.entry-selected(entry.id); }
+                    clicked => {
+                        AppState.select-entry(entry.id);
+                        AppState.reset-idle-timer();
+                    }
                 }
 
                 HorizontalBox {
                     padding: 12px;
                     spacing: 10px;
 
-                    // Аватар (перша літера назви)
+                    // Аватар
                     Rectangle {
                         width: 40px;
                         height: 40px;
@@ -177,7 +171,7 @@ export component EntryList inherits Rectangle {
         }
 
         // ── Спінер ──────────────────────────────────────────────────────────
-        if root.is-loading: Rectangle {
+        if AppState.is-loading: Rectangle {
             height: 40px;
             background: #0d2d50;
 

@@ -1,5 +1,5 @@
 import { Button, LineEdit, TextEdit, VerticalBox, HorizontalBox } from "std-widgets.slint";
-import { EntryItem } from "../globals.slint";
+import { EntryItem, AppState } from "../globals.slint";
 
 // ── Допоміжні компоненти (визначаються до EntryDetail) ─────────────────────
 
@@ -47,39 +47,38 @@ component EditField inherits VerticalBox {
     }
 }
 
-// ── Права панель: перегляд / редагування / новий запис ─────────────────────
+// ── Права панель ───────────────────────────────────────────────────────────
 
 export component EntryDetail inherits Rectangle {
-    in property <EntryItem> entry;
-    // "view" | "edit" | "new"
-    in property <string> mode: "view";
-    in property <bool> show-password: false;
-    in property <string> error-message: "";
-    // Встановлюється батьком коли пароль прийнятий з GenerateDialog
+    // UI-only: передається з AppWindow (show-password живе на root).
+    in-out property <bool> show-password: false;
+    // Заповнюється AppWindow коли пароль прийнятий з GenerateDialog.
     in property <string> accepted-password: "";
 
-    callback save-requested(EntryItem);
+    // Події, які потребують координації на рівні AppWindow.
     callback delete-requested(int);
-    callback copy-password-requested(int);
-    callback reveal-password-requested(int);
-    callback edit-requested();
-    callback cancel-requested();
     callback generate-password-requested();
 
+    // Локальний стан форми.
     private property <string> edit-title: "";
     private property <string> edit-username: "";
     private property <string> edit-url: "";
     private property <string> edit-password: "";
 
-    changed entry => {
-        edit-title = root.entry.title;
-        edit-username = root.entry.username;
-        edit-url = root.entry.url;
+    // Дзеркала глобалів — лише для `changed`-хуків (Slint не дозволяє
+    // `changed AppState.x` напряму).
+    property <EntryItem> _entry-mirror: AppState.selected-entry;
+    property <string> _mode-mirror: AppState.detail-mode;
+
+    changed _entry-mirror => {
+        edit-title = root._entry-mirror.title;
+        edit-username = root._entry-mirror.username;
+        edit-url = root._entry-mirror.url;
         edit-password = "";
     }
 
-    changed mode => {
-        if (root.mode == "new") {
+    changed _mode-mirror => {
+        if (root._mode-mirror == "new") {
             edit-title = "";
             edit-username = "";
             edit-url = "";
@@ -96,7 +95,7 @@ export component EntryDetail inherits Rectangle {
     background: #12192b;
 
     // ── Порожній стан ───────────────────────────────────────────────────────
-    if root.mode == "view" && root.entry.id <= 0: VerticalLayout {
+    if AppState.detail-mode == "view" && AppState.selected-entry.id <= 0: VerticalLayout {
         alignment: center;
         spacing: 12px;
 
@@ -114,7 +113,7 @@ export component EntryDetail inherits Rectangle {
     }
 
     // ── Режим перегляду ─────────────────────────────────────────────────────
-    if root.mode == "view" && root.entry.id > 0: VerticalLayout {
+    if AppState.detail-mode == "view" && AppState.selected-entry.id > 0: VerticalLayout {
         padding: 32px;
         spacing: 16px;
 
@@ -122,7 +121,7 @@ export component EntryDetail inherits Rectangle {
             spacing: 8px;
 
             Text {
-                text: root.entry.title;
+                text: AppState.selected-entry.title;
                 font-size: 22px;
                 font-weight: 700;
                 color: #e0e0e0;
@@ -133,18 +132,21 @@ export component EntryDetail inherits Rectangle {
 
             Button {
                 text: "Редагувати";
-                clicked => { root.edit-requested(); }
+                clicked => {
+                    AppState.detail-mode = "edit";
+                    AppState.reset-idle-timer();
+                }
             }
             Button {
                 text: "Видалити";
-                clicked => { root.delete-requested(root.entry.id); }
+                clicked => { root.delete-requested(AppState.selected-entry.id); }
             }
         }
 
-        ViewField { label: "Логін"; value: root.entry.username; }
-        ViewField { label: "URL"; value: root.entry.url; }
-        ViewField { label: "Категорія"; value: root.entry.category; }
-        ViewField { label: "Оновлено"; value: root.entry.updated-at; }
+        ViewField { label: "Логін"; value: AppState.selected-entry.username; }
+        ViewField { label: "URL"; value: AppState.selected-entry.url; }
+        ViewField { label: "Категорія"; value: AppState.selected-entry.category; }
+        ViewField { label: "Оновлено"; value: AppState.selected-entry.updated-at; }
 
         Rectangle {
             border-radius: 8px;
@@ -165,7 +167,9 @@ export component EntryDetail inherits Rectangle {
                     spacing: 8px;
 
                     Text {
-                        text: root.show-password ? root.entry.password : "••••••••••••";
+                        text: root.show-password
+                            ? AppState.selected-entry.password
+                            : "••••••••••••";
                         font-size: 14px;
                         color: root.show-password ? #e0e0e0 : #5566aa;
                         vertical-alignment: center;
@@ -175,24 +179,31 @@ export component EntryDetail inherits Rectangle {
 
                     Button {
                         text: root.show-password ? "Сховати" : "Показати";
-                        clicked => { root.reveal-password-requested(root.entry.id); }
+                        clicked => {
+                            root.show-password = !root.show-password;
+                            AppState.reveal-password(AppState.selected-entry.id);
+                            AppState.reset-idle-timer();
+                        }
                     }
                     Button {
                         text: "Копіювати";
-                        clicked => { root.copy-password-requested(root.entry.id); }
+                        clicked => {
+                            AppState.copy-password(AppState.selected-entry.id);
+                            AppState.reset-idle-timer();
+                        }
                     }
                 }
             }
         }
     }
 
-    // ── Режим редагування / новий ────────────────────────────────────────────
-    if root.mode == "edit" || root.mode == "new": VerticalLayout {
+    // ── Режим редагування / новий ───────────────────────────────────────────
+    if AppState.detail-mode == "edit" || AppState.detail-mode == "new": VerticalLayout {
         padding: 32px;
         spacing: 16px;
 
         Text {
-            text: root.mode == "new" ? "Новий запис" : "Редагування";
+            text: AppState.detail-mode == "new" ? "Новий запис" : "Редагування";
             font-size: 20px;
             font-weight: 700;
             color: #e0e0e0;
@@ -228,15 +239,15 @@ export component EntryDetail inherits Rectangle {
             }
         }
 
-        if root.error-message != "": Rectangle {
+        if AppState.error-message != "": Rectangle {
             border-radius: 6px;
             background: #3d1515;
 
             VerticalBox {
                 padding: 10px;
 
-                err-text := Text {
-                    text: root.error-message;
+                Text {
+                    text: AppState.error-message;
                     color: #ff6b6b;
                     font-size: 12px;
                     wrap: word-wrap;
@@ -252,21 +263,25 @@ export component EntryDetail inherits Rectangle {
                 primary: true;
                 enabled: root.edit-title != "";
                 clicked => {
-                    root.save-requested({
-                        id: root.entry.id,
+                    AppState.save-entry({
+                        id: AppState.selected-entry.id,
                         title: root.edit-title,
                         username: root.edit-username,
                         url: root.edit-url,
                         password: root.edit-password,
-                        category: root.entry.category,
-                        favorite: root.entry.favorite,
-                        updated-at: root.entry.updated-at,
+                        category: AppState.selected-entry.category,
+                        favorite: AppState.selected-entry.favorite,
+                        updated-at: AppState.selected-entry.updated-at,
                     });
+                    AppState.reset-idle-timer();
                 }
             }
             Button {
                 text: "Скасувати";
-                clicked => { root.cancel-requested(); }
+                clicked => {
+                    AppState.detail-mode = "view";
+                    AppState.reset-idle-timer();
+                }
             }
         }
     }

@@ -1,18 +1,9 @@
 import { Button, LineEdit, VerticalBox } from "std-widgets.slint";
+import { AppState } from "../globals.slint";
 
-// Діалог входу/створення vault.
-// Показується поверх AppWindow коли is-locked = true.
+// Діалог входу/створення vault. Читає AppState напряму.
+// Показується поверх AppWindow коли AppState.is-logged-in = false.
 export component LoginDialog inherits Rectangle {
-    // true = перший запуск (vault ще не існує)
-    in property <bool> is-new-vault: false;
-    // непорожній рядок = показати помилку
-    in property <string> error-message: "";
-
-    callback unlock-requested(string);   // password
-    callback create-requested(string);   // password (новий vault)
-
-    private property <bool> submitting: false;
-
     background: #1a1a2e;
 
     VerticalLayout {
@@ -36,7 +27,7 @@ export component LoginDialog inherits Rectangle {
 
                 // Заголовок
                 Text {
-                    text: root.is-new-vault ? "Створити сховище" : "Відкрити сховище";
+                    text: AppState.is-new-vault ? "Створити сховище" : "Відкрити сховище";
                     font-size: 22px;
                     font-weight: 700;
                     color: #e0e0e0;
@@ -52,7 +43,7 @@ export component LoginDialog inherits Rectangle {
 
                 // Підказка
                 Text {
-                    text: root.is-new-vault
+                    text: AppState.is-new-vault
                         ? "Введіть мастер-пароль для нового сховища"
                         : "Введіть мастер-пароль";
                     font-size: 13px;
@@ -65,18 +56,12 @@ export component LoginDialog inherits Rectangle {
                 password-input := LineEdit {
                     placeholder-text: "Мастер-пароль";
                     input-type: password;
-                    enabled: !root.submitting;
-                    accepted(text) => {
-                        if (root.is-new-vault) {
-                            root.create-requested(text);
-                        } else {
-                            root.unlock-requested(text);
-                        }
-                    }
+                    enabled: !AppState.is-loading;
+                    accepted(text) => { AppState.login(text); }
                 }
 
                 // Повідомлення про помилку
-                if root.error-message != "": Rectangle {
+                if AppState.error-message != "": Rectangle {
                     border-radius: 6px;
                     background: #3d1515;
 
@@ -84,7 +69,7 @@ export component LoginDialog inherits Rectangle {
                         padding: 10px;
 
                         Text {
-                            text: root.error-message;
+                            text: AppState.error-message;
                             color: #ff6b6b;
                             font-size: 12px;
                             wrap: word-wrap;
@@ -95,16 +80,10 @@ export component LoginDialog inherits Rectangle {
 
                 // Кнопка
                 Button {
-                    text: root.is-new-vault ? "Створити" : "Відкрити";
+                    text: AppState.is-new-vault ? "Створити" : "Відкрити";
                     primary: true;
-                    enabled: !root.submitting && password-input.text != "";
-                    clicked => {
-                        if (root.is-new-vault) {
-                            root.create-requested(password-input.text);
-                        } else {
-                            root.unlock-requested(password-input.text);
-                        }
-                    }
+                    enabled: !AppState.is-loading && password-input.text != "";
+                    clicked => { AppState.login(password-input.text); }
                 }
             }
         }

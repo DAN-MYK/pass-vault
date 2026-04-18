@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 
 use crate::vault::model::{Category, Entry, VaultError};
+use rand::RngCore;
 use rusqlite::Connection;
 use std::path::PathBuf;
 
@@ -37,6 +38,30 @@ impl Vault {
                 "cannot determine data directory",
             )))?;
         Ok(data_dir.join("pass-vault").join("vault.db"))
+    }
+
+    fn salt_path() -> Result<PathBuf, VaultError> {
+        Ok(Self::db_path()?.with_extension("salt"))
+    }
+
+    pub fn load_or_create_salt() -> Result<[u8; 32], VaultError> {
+        let path = Self::salt_path()?;
+        if path.exists() {
+            let bytes = std::fs::read(&path)?;
+            if bytes.len() == 32 {
+                let mut arr = [0u8; 32];
+                arr.copy_from_slice(&bytes);
+                return Ok(arr);
+            }
+        }
+        // Generate new salt
+        let mut salt = [0u8; 32];
+        rand::rngs::OsRng.fill_bytes(&mut salt);
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::write(&path, &salt)?;
+        Ok(salt)
     }
 
     fn migrate(&self) -> Result<(), VaultError> {
