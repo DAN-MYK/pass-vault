@@ -29,6 +29,6 @@ pub fn ui_to_entry(item: &EntryItem) -> Entry {
         },
         category_id: 0,
         favorite: item.favorite,
-        updated_at: chrono::Utc::now(),
+        updated_at: chrono::DateTime::default(),
     }
 }

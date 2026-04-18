@@ -141,6 +141,7 @@ impl Vault {
     }
 
     pub fn save_entry(&self, entry: &Entry, encrypted_password: &[u8]) -> Result<u32, VaultError> {
+        let now = chrono::Utc::now().to_rfc3339();
         if entry.id == 0 {
             // Insert
             self.conn.execute(
@@ -154,7 +155,7 @@ impl Vault {
                     entry.notes,
                     entry.category_id,
                     entry.favorite as i32,
-                    entry.updated_at.to_rfc3339(),
+                    now,
                 ],
             )?;
             Ok(self.conn.last_insert_rowid() as u32)
@@ -171,7 +172,7 @@ impl Vault {
                     entry.notes,
                     entry.category_id,
                     entry.favorite as i32,
-                    entry.updated_at.to_rfc3339(),
+                    now,
                     entry.id,
                 ],
             )?;

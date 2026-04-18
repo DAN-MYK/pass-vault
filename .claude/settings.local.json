@@ -5,7 +5,8 @@
       "Bash(wc:*)",
       "Bash(cargo test:*)",
       "Bash(cargo run:*)",
-      "Bash(cargo clean *)"
+      "Bash(cargo clean *)",
+      "Bash(cargo build *)"
     ]
   }
 }
