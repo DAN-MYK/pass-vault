@@ -9,10 +9,11 @@ pub fn entry_to_ui(e: &Entry) -> EntryItem {
         title: e.title.as_str().into(),
         username: e.username.as_str().into(),
         url: e.url.as_str().into(),
+        password: SharedString::default(),
+        notes: e.notes.as_deref().unwrap_or("").into(),
         category: SharedString::default(),
         favorite: e.favorite,
         updated_at: e.updated_at.format("%Y-%m-%d").to_string().into(),
-        password: SharedString::default(),
     }
 }
 
@@ -22,7 +23,10 @@ pub fn ui_to_entry(item: &EntryItem) -> Entry {
         title: item.title.to_string(),
         username: item.username.to_string(),
         url: item.url.to_string(),
-        notes: None,
+        notes: {
+            let s = item.notes.to_string();
+            if s.is_empty() { None } else { Some(s) }
+        },
         category_id: 0,
         favorite: item.favorite,
         updated_at: chrono::Utc::now(),

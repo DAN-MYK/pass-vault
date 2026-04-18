@@ -64,6 +64,7 @@ export component EntryDetail inherits Rectangle {
     private property <string> edit-username: "";
     private property <string> edit-url: "";
     private property <string> edit-password: "";
+    private property <string> edit-notes: "";
 
     // Дзеркала глобалів — лише для `changed`-хуків (Slint не дозволяє
     // `changed AppState.x` напряму).
@@ -75,6 +76,7 @@ export component EntryDetail inherits Rectangle {
         edit-username = root._entry-mirror.username;
         edit-url = root._entry-mirror.url;
         edit-password = "";
+        edit-notes = root._entry-mirror.notes;
     }
 
     changed _mode-mirror => {
@@ -83,6 +85,7 @@ export component EntryDetail inherits Rectangle {
             edit-username = "";
             edit-url = "";
             edit-password = "";
+            edit-notes = "";
         }
     }
 
@@ -146,6 +149,7 @@ export component EntryDetail inherits Rectangle {
         ViewField { label: "Логін"; value: AppState.selected-entry.username; }
         ViewField { label: "URL"; value: AppState.selected-entry.url; }
         ViewField { label: "Категорія"; value: AppState.selected-entry.category; }
+        ViewField { label: "Нотатки"; value: AppState.selected-entry.notes; }
         ViewField { label: "Оновлено"; value: AppState.selected-entry.updated-at; }
 
         Rectangle {
@@ -269,6 +273,7 @@ export component EntryDetail inherits Rectangle {
                         username: root.edit-username,
                         url: root.edit-url,
                         password: root.edit-password,
+                        notes: root.edit-notes,
                         category: AppState.selected-entry.category,
                         favorite: AppState.selected-entry.favorite,
                         updated-at: AppState.selected-entry.updated-at,

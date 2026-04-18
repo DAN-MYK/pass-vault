@@ -1,23 +1,21 @@
 import { Button, CheckBox, Slider, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { AppState } from "../globals.slint";
 
 // Діалог генерації пароля.
-// Без внутрішнього стану генерації — все через callback.
+// Викликає AppState.generate-password() напряму; повертає вибраний пароль
+// у батьківський AppWindow через accept-requested (там запишеться у pending-generated-password).
 export component GenerateDialog inherits Rectangle {
+    // Локальний (UI-only) стан діалогу
     private property <string> generated-password: "";
-
-    // Rust генерує пароль синхронно і повертає SharedString
-    callback generate-requested(int, bool, bool, bool, bool) -> string;
-    // length, uppercase, digits, symbols, exclude-ambiguous
-
-    callback accept-requested(string);  // передати пароль в поле запису
-    callback close-requested();
-
-    // Налаштування
     private property <int>  pwd-length: 20;
     private property <bool> use-uppercase: true;
     private property <bool> use-digits: true;
     private property <bool> use-symbols: true;
     private property <bool> excl-ambiguous: true;
+
+    // UI-callbacks до батька: прийняти пароль / закрити діалог
+    callback accept-requested(string);
+    callback close-requested();
 
     // Затемнення фону
     background: #00000099;
@@ -61,33 +59,33 @@ export component GenerateDialog inherits Rectangle {
                 border-radius: 8px;
                 background: #0a1628;
 
-            VerticalBox {
-                padding: 16px;
+                VerticalBox {
+                    padding: 16px;
 
-                HorizontalBox {
-                    spacing: 8px;
+                    HorizontalBox {
+                        spacing: 8px;
 
-                    Text {
-                        text: root.generated-password == ""
-                            ? "Натисніть «Згенерувати»"
-                            : root.generated-password;
-                        font-size: 14px;
-                        color: root.generated-password == "" ? #445566 : #7ecfff;
-                        font-family: "monospace";
-                        vertical-alignment: center;
-                        horizontal-stretch: 1;
-                        overflow: elide;
-                    }
+                        Text {
+                            text: root.generated-password == ""
+                                ? "Натисніть «Згенерувати»"
+                                : root.generated-password;
+                            font-size: 14px;
+                            color: root.generated-password == "" ? #445566 : #7ecfff;
+                            font-family: "monospace";
+                            vertical-alignment: center;
+                            horizontal-stretch: 1;
+                            overflow: elide;
+                        }
 
-                    if root.generated-password != "": Button {
-                        text: "Копіювати";
-                        clicked => {
-                            // clipboard через accept + callback в handlers
-                            root.accept-requested(root.generated-password);
+                        if root.generated-password != "": Button {
+                            text: "Копіювати";
+                            clicked => {
+                                AppState.reset-idle-timer();
+                                root.accept-requested(root.generated-password);
+                            }
                         }
                     }
                 }
-            }
             }
 
             // Довжина
@@ -118,6 +116,7 @@ export component GenerateDialog inherits Rectangle {
                     value: root.pwd-length;
                     changed(v) => {
                         root.pwd-length = Math.round(v);
+                        AppState.reset-idle-timer();
                     }
                 }
             }
@@ -153,8 +152,8 @@ export component GenerateDialog inherits Rectangle {
                     primary: true;
                     horizontal-stretch: 1;
                     clicked => {
-                        // Синхронний callback — Rust повертає SharedString відразу
-                        root.generated-password = root.generate-requested(
+                        AppState.reset-idle-timer();
+                        root.generated-password = AppState.generate-password(
                             root.pwd-length,
                             root.use-uppercase,
                             root.use-digits,
@@ -167,7 +166,10 @@ export component GenerateDialog inherits Rectangle {
                 if root.generated-password != "": Button {
                     text: "Використати";
                     horizontal-stretch: 1;
-                    clicked => { root.accept-requested(root.generated-password); }
+                    clicked => {
+                        AppState.reset-idle-timer();
+                        root.accept-requested(root.generated-password);
+                    }
                 }
             }
         }

@@ -73,12 +73,6 @@ export component AppWindow inherits Window {
             width: 100%;
             height: 100%;
 
-            generate-requested(len, upper, digits, symbols, excl) => {
-                root.pending-generated-password = AppState.generate-password(
-                    len, upper, digits, symbols, excl
-                );
-                return root.pending-generated-password;
-            }
             accept-requested(pwd) => {
                 root.pending-generated-password = pwd;
                 root.show-generate-dialog = false;
