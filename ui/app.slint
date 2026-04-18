@@ -1,0 +1,179 @@
+import { EntryItem, CategoryItem } from "globals.slint";
+import { LoginDialog } from "components/login-dialog.slint";
+import { EntryList } from "components/entry-list.slint";
+import { EntryDetail } from "components/entry-detail.slint";
+import { GenerateDialog } from "components/generate-dialog.slint";
+import { ConfirmDialog } from "components/confirm-dialog.slint";
+import { HorizontalBox } from "std-widgets.slint";
+
+export { EntryItem, CategoryItem }
+
+export component AppWindow inherits Window {
+    title: "Pass Vault";
+    width: 900px;
+    height: 600px;
+
+    // --- Стан сесії ---
+    in-out property <bool> is-locked: true;
+    in-out property <bool> is-loading: false;
+    in-out property <string> error-message;
+    in-out property <bool> is-new-vault: false;
+
+    // --- Дані ---
+    in-out property <[EntryItem]> entries;
+    in-out property <[CategoryItem]> categories;
+    in-out property <int> selected-entry-id: -1;
+    in-out property <EntryItem> selected-entry;
+    in-out property <string> search-query;
+
+    // --- UI-стан деталі ---
+    in-out property <string> detail-mode: "view";
+    in-out property <bool> show-password: false;
+
+    // --- GenerateDialog ---
+    in-out property <bool> show-generate-dialog: false;
+    in-out property <string> pending-generated-password: "";
+
+    // --- ConfirmDialog ---
+    in-out property <bool> show-confirm-dialog: false;
+    in-out property <int> pending-delete-id: -1;
+
+    // --- Callbacks: UI → Rust ---
+    callback login(string);
+    callback search-changed(string);
+    callback entry-selected(int);
+    callback entry-save(EntryItem);
+    callback entry-delete(int);
+    callback entry-copy-password(int);
+    callback reveal-password(int);
+    callback lock-requested();
+    callback new-entry-requested();
+    // length, uppercase, digits, symbols, exclude-ambiguous
+    callback generate-password(int, bool, bool, bool, bool) -> string;
+    callback reset-idle-timer();
+
+    Rectangle {
+        background: #0a1628;
+
+        // ── Основний layout (розблоковано) ──────────────────────────────────
+        if !root.is-locked: HorizontalBox {
+            entry-list := EntryList {
+                width: 280px;
+                entries: root.entries;
+                selected-id: root.selected-entry-id;
+                is-loading: root.is-loading;
+
+                search-changed(q) => {
+                    root.search-query = q;
+                    root.search-changed(q);
+                    root.reset-idle-timer();
+                }
+                entry-selected(id) => {
+                    root.show-password = false;
+                    root.entry-selected(id);
+                    root.reset-idle-timer();
+                }
+                new-entry-requested => {
+                    root.selected-entry-id = -1;
+                    root.detail-mode = "new";
+                    root.show-password = false;
+                    root.new-entry-requested();
+                    root.reset-idle-timer();
+                }
+                lock-requested => {
+                    root.lock-requested();
+                }
+            }
+
+            EntryDetail {
+                horizontal-stretch: 1;
+                entry: root.selected-entry;
+                mode: root.detail-mode;
+                show-password: root.show-password;
+                error-message: root.error-message;
+                accepted-password: root.pending-generated-password;
+
+                save-requested(item) => {
+                    root.entry-save(item);
+                    root.reset-idle-timer();
+                }
+                delete-requested(id) => {
+                    root.pending-delete-id = id;
+                    root.show-confirm-dialog = true;
+                    root.reset-idle-timer();
+                }
+                copy-password-requested(id) => {
+                    root.entry-copy-password(id);
+                    root.reset-idle-timer();
+                }
+                reveal-password-requested(id) => {
+                    root.show-password = !root.show-password;
+                    root.reveal-password(id);
+                    root.reset-idle-timer();
+                }
+                edit-requested => {
+                    root.detail-mode = "edit";
+                    root.reset-idle-timer();
+                }
+                cancel-requested => {
+                    root.detail-mode = "view";
+                    root.reset-idle-timer();
+                }
+                generate-password-requested => {
+                    root.pending-generated-password = "";
+                    root.show-generate-dialog = true;
+                    root.reset-idle-timer();
+                }
+            }
+        }
+
+        // ── Login overlay ───────────────────────────────────────────────────
+        if root.is-locked: LoginDialog {
+            width: 100%;
+            height: 100%;
+            is-new-vault: root.is-new-vault;
+            error-message: root.error-message;
+
+            unlock-requested(pwd) => { root.login(pwd); }
+            create-requested(pwd) => { root.login(pwd); }
+        }
+
+        // ── GenerateDialog overlay ──────────────────────────────────────────
+        if root.show-generate-dialog: GenerateDialog {
+            width: 100%;
+            height: 100%;
+
+            generate-requested(len, upper, digits, symbols, excl) => {
+                root.pending-generated-password = root.generate-password(
+                    len, upper, digits, symbols, excl
+                );
+                return root.pending-generated-password;
+            }
+            accept-requested(pwd) => {
+                root.pending-generated-password = pwd;
+                root.show-generate-dialog = false;
+            }
+            close-requested => {
+                root.show-generate-dialog = false;
+            }
+        }
+
+        // ── ConfirmDialog overlay ───────────────────────────────────────────
+        if root.show-confirm-dialog: ConfirmDialog {
+            width: 100%;
+            height: 100%;
+            title: "Видалити запис?";
+            message: "Цю дію не можна скасувати.";
+            confirm-text: "Видалити";
+            is-destructive: true;
+
+            confirmed => {
+                root.show-confirm-dialog = false;
+                root.entry-delete(root.pending-delete-id);
+            }
+            cancelled => {
+                root.show-confirm-dialog = false;
+            }
+        }
+    }
+}

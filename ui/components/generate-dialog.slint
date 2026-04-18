@@ -1,0 +1,172 @@
+import { Button, CheckBox, Slider, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+// Діалог генерації пароля.
+// Без внутрішнього стану генерації — все через callback.
+export component GenerateDialog inherits Rectangle {
+    private property <string> generated-password: "";
+
+    // Rust генерує пароль синхронно і повертає SharedString
+    callback generate-requested(int, bool, bool, bool, bool) -> string;
+    // length, uppercase, digits, symbols, exclude-ambiguous
+
+    callback accept-requested(string);  // передати пароль в поле запису
+    callback close-requested();
+
+    // Налаштування
+    private property <int>  pwd-length: 20;
+    private property <bool> use-uppercase: true;
+    private property <bool> use-digits: true;
+    private property <bool> use-symbols: true;
+    private property <bool> excl-ambiguous: true;
+
+    // Затемнення фону
+    background: #00000099;
+
+    TouchArea {
+        width: 100%; height: 100%;
+        clicked => { root.close-requested(); }
+    }
+
+    // Картка
+    Rectangle {
+        width: 420px;
+        height: self.preferred-height;
+        border-radius: 12px;
+        background: #16213e;
+        drop-shadow-blur: 40px;
+        drop-shadow-color: #000000aa;
+
+        VerticalBox {
+            padding: 32px;
+            spacing: 20px;
+
+            // Заголовок
+            HorizontalBox {
+                Text {
+                    text: "Генератор паролів";
+                    font-size: 18px;
+                    font-weight: 700;
+                    color: #e0e0e0;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                }
+                Button {
+                    text: "✕";
+                    clicked => { root.close-requested(); }
+                }
+            }
+
+            // Результат
+            VerticalBox {
+                border-radius: 8px;
+                background: #0a1628;
+                padding: 16px;
+
+                HorizontalBox {
+                    spacing: 8px;
+
+                    Text {
+                        text: root.generated-password == ""
+                            ? "Натисніть «Згенерувати»"
+                            : root.generated-password;
+                        font-size: 14px;
+                        color: root.generated-password == "" ? #445566 : #7ecfff;
+                        font-family: "monospace";
+                        vertical-alignment: center;
+                        horizontal-stretch: 1;
+                        overflow: elide;
+                    }
+
+                    if root.generated-password != "": Button {
+                        text: "Копіювати";
+                        clicked => {
+                            // clipboard через accept + callback в handlers
+                            root.accept-requested(root.generated-password);
+                        }
+                    }
+                }
+            }
+
+            // Довжина
+            VerticalBox {
+                spacing: 8px;
+
+                HorizontalBox {
+                    Text {
+                        text: "Довжина:";
+                        font-size: 13px;
+                        color: #8899bb;
+                        vertical-alignment: center;
+                    }
+                    Text {
+                        text: root.pwd-length;
+                        font-size: 14px;
+                        font-weight: 700;
+                        color: #e0e0e0;
+                        vertical-alignment: center;
+                        horizontal-alignment: right;
+                        horizontal-stretch: 1;
+                    }
+                }
+
+                Slider {
+                    minimum: 12;
+                    maximum: 64;
+                    value: root.pwd-length;
+                    changed(v) => {
+                        root.pwd-length = Math.round(v);
+                    }
+                }
+            }
+
+            // Перемикачі
+            VerticalBox {
+                spacing: 10px;
+
+                CheckBox {
+                    text: "Великі літери (A–Z)";
+                    checked <=> root.use-uppercase;
+                }
+                CheckBox {
+                    text: "Цифри (2–9)";
+                    checked <=> root.use-digits;
+                }
+                CheckBox {
+                    text: "Символи (!@#$...)";
+                    checked <=> root.use-symbols;
+                }
+                CheckBox {
+                    text: "Виключити схожі (0, O, I, l, 1)";
+                    checked <=> root.excl-ambiguous;
+                }
+            }
+
+            // Кнопки
+            HorizontalBox {
+                spacing: 8px;
+
+                Button {
+                    text: "Згенерувати";
+                    primary: true;
+                    horizontal-stretch: 1;
+                    clicked => {
+                        // Синхронний callback — Rust повертає SharedString відразу
+                        root.generated-password = root.generate-requested(
+                            root.pwd-length,
+                            root.use-uppercase,
+                            root.use-digits,
+                            root.use-symbols,
+                            root.excl-ambiguous,
+                        );
+                    }
+                }
+
+                if root.generated-password != "": Button {
+                    text: "Використати";
+                    horizontal-stretch: 1;
+                    clicked => { root.accept-requested(root.generated-password); }
+                }
+            }
+        }
+    }
+}

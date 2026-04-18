@@ -1,0 +1,274 @@
+import { Button, LineEdit, TextEdit, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { EntryItem } from "../globals.slint";
+
+// ── Допоміжні компоненти (визначаються до EntryDetail) ─────────────────────
+
+component ViewField inherits Rectangle {
+    in property <string> label;
+    in property <string> value;
+
+    border-radius: 8px;
+    background: #1a2540;
+
+    VerticalBox {
+        padding: 12px;
+        spacing: 4px;
+
+        Text {
+            text: root.label;
+            font-size: 11px;
+            color: #5566aa;
+            font-weight: 600;
+        }
+        Text {
+            text: root.value == "" ? "—" : root.value;
+            font-size: 14px;
+            color: root.value == "" ? #445566 : #c0d0e0;
+            overflow: elide;
+        }
+    }
+}
+
+component EditField inherits VerticalBox {
+    in property <string> label;
+    in-out property <string> value;
+
+    spacing: 6px;
+
+    Text {
+        text: root.label;
+        font-size: 11px;
+        color: #5566aa;
+        font-weight: 600;
+    }
+    LineEdit {
+        text <=> root.value;
+        placeholder-text: root.label;
+    }
+}
+
+// ── Права панель: перегляд / редагування / новий запис ─────────────────────
+
+export component EntryDetail inherits Rectangle {
+    in property <EntryItem> entry;
+    // "view" | "edit" | "new"
+    in property <string> mode: "view";
+    in property <bool> show-password: false;
+    in property <string> error-message: "";
+    // Встановлюється батьком коли пароль прийнятий з GenerateDialog
+    in property <string> accepted-password: "";
+
+    callback save-requested(EntryItem);
+    callback delete-requested(int);
+    callback copy-password-requested(int);
+    callback reveal-password-requested(int);
+    callback edit-requested();
+    callback cancel-requested();
+    callback generate-password-requested();
+
+    private property <string> edit-title: "";
+    private property <string> edit-username: "";
+    private property <string> edit-url: "";
+    private property <string> edit-password: "";
+
+    changed entry => {
+        edit-title = root.entry.title;
+        edit-username = root.entry.username;
+        edit-url = root.entry.url;
+        edit-password = "";
+    }
+
+    changed mode => {
+        if (root.mode == "new") {
+            edit-title = "";
+            edit-username = "";
+            edit-url = "";
+            edit-password = "";
+        }
+    }
+
+    changed accepted-password => {
+        if (root.accepted-password != "") {
+            edit-password = root.accepted-password;
+        }
+    }
+
+    background: #12192b;
+
+    // ── Порожній стан ───────────────────────────────────────────────────────
+    if root.mode == "view" && root.entry.id <= 0: VerticalLayout {
+        alignment: center;
+        spacing: 12px;
+
+        Text {
+            text: "🔑";
+            font-size: 48px;
+            horizontal-alignment: center;
+        }
+        Text {
+            text: "Оберіть запис або створіть новий";
+            font-size: 14px;
+            color: #5566aa;
+            horizontal-alignment: center;
+        }
+    }
+
+    // ── Режим перегляду ─────────────────────────────────────────────────────
+    if root.mode == "view" && root.entry.id > 0: VerticalLayout {
+        padding: 32px;
+        spacing: 16px;
+
+        HorizontalBox {
+            spacing: 8px;
+
+            Text {
+                text: root.entry.title;
+                font-size: 22px;
+                font-weight: 700;
+                color: #e0e0e0;
+                vertical-alignment: center;
+                horizontal-stretch: 1;
+                overflow: elide;
+            }
+
+            Button {
+                text: "Редагувати";
+                clicked => { root.edit-requested(); }
+            }
+            Button {
+                text: "Видалити";
+                clicked => { root.delete-requested(root.entry.id); }
+            }
+        }
+
+        ViewField { label: "Логін"; value: root.entry.username; }
+        ViewField { label: "URL"; value: root.entry.url; }
+        ViewField { label: "Категорія"; value: root.entry.category; }
+        ViewField { label: "Оновлено"; value: root.entry.updated-at; }
+
+        Rectangle {
+            border-radius: 8px;
+            background: #1a2540;
+
+            VerticalBox {
+                padding: 12px;
+                spacing: 6px;
+
+                Text {
+                    text: "Пароль";
+                    font-size: 11px;
+                    color: #5566aa;
+                    font-weight: 600;
+                }
+
+                HorizontalBox {
+                    spacing: 8px;
+
+                    Text {
+                        text: root.show-password ? root.entry.password : "••••••••••••";
+                        font-size: 14px;
+                        color: root.show-password ? #e0e0e0 : #5566aa;
+                        vertical-alignment: center;
+                        horizontal-stretch: 1;
+                        overflow: elide;
+                    }
+
+                    Button {
+                        text: root.show-password ? "Сховати" : "Показати";
+                        clicked => { root.reveal-password-requested(root.entry.id); }
+                    }
+                    Button {
+                        text: "Копіювати";
+                        clicked => { root.copy-password-requested(root.entry.id); }
+                    }
+                }
+            }
+        }
+        }
+    }
+
+    // ── Режим редагування / новий ────────────────────────────────────────────
+    if root.mode == "edit" || root.mode == "new": VerticalLayout {
+        padding: 32px;
+        spacing: 16px;
+
+        Text {
+            text: root.mode == "new" ? "Новий запис" : "Редагування";
+            font-size: 20px;
+            font-weight: 700;
+            color: #e0e0e0;
+        }
+
+        EditField { label: "Назва *"; value <=> root.edit-title; }
+        EditField { label: "Логін"; value <=> root.edit-username; }
+        EditField { label: "URL"; value <=> root.edit-url; }
+
+        VerticalBox {
+            spacing: 6px;
+
+            Text {
+                text: "Пароль";
+                font-size: 11px;
+                color: #5566aa;
+                font-weight: 600;
+            }
+
+            HorizontalBox {
+                spacing: 8px;
+
+                LineEdit {
+                    horizontal-stretch: 1;
+                    input-type: password;
+                    placeholder-text: "Пароль";
+                    text <=> root.edit-password;
+                }
+                Button {
+                    text: "Згенерувати";
+                    clicked => { root.generate-password-requested(); }
+                }
+            }
+        }
+
+        if root.error-message != "": Rectangle {
+            border-radius: 6px;
+            background: #3d1515;
+
+            VerticalBox {
+                padding: 10px;
+
+                err-text := Text {
+                    text: root.error-message;
+                    color: #ff6b6b;
+                    font-size: 12px;
+                    wrap: word-wrap;
+                }
+            }
+        }
+
+        HorizontalBox {
+            spacing: 8px;
+
+            Button {
+                text: "Зберегти";
+                primary: true;
+                enabled: root.edit-title != "";
+                clicked => {
+                    root.save-requested({
+                        id: root.entry.id,
+                        title: root.edit-title,
+                        username: root.edit-username,
+                        url: root.edit-url,
+                        password: root.edit-password,
+                        category: root.entry.category,
+                        favorite: root.entry.favorite,
+                        updated-at: root.entry.updated-at,
+                    });
+                }
+            }
+            Button {
+                text: "Скасувати";
+                clicked => { root.cancel-requested(); }
+            }
+        }
+    }
+}

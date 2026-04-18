@@ -1,0 +1,22 @@
+# Rust
+/target
+
+# Markdown
+*.md
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Secrets
+.env
+*.env
+secrets.*

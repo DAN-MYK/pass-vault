@@ -1,0 +1,112 @@
+import { Button, LineEdit, VerticalBox } from "std-widgets.slint";
+
+// Діалог входу/створення vault.
+// Показується поверх AppWindow коли is-locked = true.
+export component LoginDialog inherits Rectangle {
+    // true = перший запуск (vault ще не існує)
+    in property <bool> is-new-vault: false;
+    // непорожній рядок = показати помилку
+    in property <string> error-message: "";
+
+    callback unlock-requested(string);   // password
+    callback create-requested(string);   // password (новий vault)
+
+    private property <bool> submitting: false;
+
+    background: #1a1a2e;
+
+    VerticalLayout {
+        alignment: center;
+        padding: 0px;
+        spacing: 0px;
+
+        // Центрована картка
+        Rectangle {
+            width: 380px;
+            height: self.preferred-height;
+            border-radius: 12px;
+            background: #16213e;
+            drop-shadow-blur: 32px;
+            drop-shadow-color: #00000066;
+
+            VerticalBox {
+                padding: 40px;
+                spacing: 20px;
+                alignment: start;
+
+                // Заголовок
+                Text {
+                    text: root.is-new-vault ? "Створити сховище" : "Відкрити сховище";
+                    font-size: 22px;
+                    font-weight: 700;
+                    color: #e0e0e0;
+                    horizontal-alignment: center;
+                }
+
+                // Іконка замку
+                Text {
+                    text: "🔐";
+                    font-size: 40px;
+                    horizontal-alignment: center;
+                }
+
+                // Підказка
+                Text {
+                    text: root.is-new-vault
+                        ? "Введіть мастер-пароль для нового сховища"
+                        : "Введіть мастер-пароль";
+                    font-size: 13px;
+                    color: #8888aa;
+                    horizontal-alignment: center;
+                    wrap: word-wrap;
+                }
+
+                // Поле паролю
+                password-input := LineEdit {
+                    placeholder-text: "Мастер-пароль";
+                    input-type: password;
+                    enabled: !root.submitting;
+                    accepted(text) => {
+                        if (root.is-new-vault) {
+                            root.create-requested(text);
+                        } else {
+                            root.unlock-requested(text);
+                        }
+                    }
+                }
+
+                // Повідомлення про помилку
+                if root.error-message != "": Rectangle {
+                    border-radius: 6px;
+                    background: #3d1515;
+
+                    VerticalBox {
+                        padding: 10px;
+
+                        Text {
+                            text: root.error-message;
+                            color: #ff6b6b;
+                            font-size: 12px;
+                            wrap: word-wrap;
+                            horizontal-alignment: center;
+                        }
+                    }
+                }
+
+                // Кнопка
+                Button {
+                    text: root.is-new-vault ? "Створити" : "Відкрити";
+                    primary: true;
+                    enabled: !root.submitting && password-input.text != "";
+                    clicked => {
+                        if (root.is-new-vault) {
+                            root.create-requested(password-input.text);
+                        } else {
+                            root.unlock-requested(password-input.text);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

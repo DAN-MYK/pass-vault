@@ -1,0 +1,37 @@
+use std::rc::Rc;
+
+use slint::{SharedString, VecModel};
+
+use crate::vault::model::Entry;
+use crate::EntryItem;
+
+pub fn entry_to_ui(e: &Entry) -> EntryItem {
+    EntryItem {
+        id: e.id as i32,
+        title: e.title.as_str().into(),
+        username: e.username.as_str().into(),
+        url: e.url.as_str().into(),
+        category: SharedString::default(),
+        favorite: e.favorite,
+        updated_at: e.updated_at.format("%Y-%m-%d").to_string().into(),
+        password: SharedString::default(),
+    }
+}
+
+pub fn ui_to_entry(item: &EntryItem) -> Entry {
+    Entry {
+        id: item.id as u32,
+        title: item.title.to_string(),
+        username: item.username.to_string(),
+        url: item.url.to_string(),
+        notes: None,
+        category_id: 0,
+        favorite: item.favorite,
+        updated_at: chrono::Utc::now(),
+    }
+}
+
+pub fn entries_to_model(entries: &[Entry]) -> Rc<VecModel<EntryItem>> {
+    let items: Vec<EntryItem> = entries.iter().map(entry_to_ui).collect();
+    Rc::new(VecModel::from(items))
+}
