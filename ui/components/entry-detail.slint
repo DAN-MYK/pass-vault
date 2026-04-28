@@ -256,6 +256,22 @@ export component EntryDetail inherits Rectangle {
             spacing: 6px;
 
             Text {
+                text: "Нотатки";
+                font-size: 11px;
+                color: #5566aa;
+                font-weight: 600;
+            }
+            TextEdit {
+                text <=> root.edit-notes;
+                placeholder-text: "Нотатки";
+                min-height: 80px;
+            }
+        }
+
+        VerticalBox {
+            spacing: 6px;
+
+            Text {
                 text: "Пароль";
                 font-size: 11px;
                 color: #5566aa;
