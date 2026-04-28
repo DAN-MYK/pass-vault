@@ -151,7 +151,40 @@ export component EntryDetail inherits Rectangle {
         ViewField { label: "Логін"; value: AppState.selected-entry.username; }
         ViewField { label: "URL"; value: AppState.selected-entry.url; }
         ViewField { label: "Категорія"; value: AppState.selected-entry.category; }
-        ViewField { label: "Нотатки"; value: AppState.selected-entry.notes; }
+        Rectangle {
+            border-radius: 8px;
+            background: #1a2540;
+
+            VerticalBox {
+                padding: 12px;
+                spacing: 4px;
+
+                HorizontalBox {
+                    spacing: 4px;
+
+                    Text {
+                        text: "Нотатки";
+                        font-size: 11px;
+                        color: #5566aa;
+                        font-weight: 600;
+                        vertical-alignment: center;
+                        horizontal-stretch: 1;
+                    }
+                    if AppState.selected-entry.notes != "": Button {
+                        text: root.notes-expanded ? "▲" : "▼";
+                        clicked => { root.notes-expanded = !root.notes-expanded; }
+                    }
+                }
+
+                Text {
+                    text: AppState.selected-entry.notes == "" ? "—" : AppState.selected-entry.notes;
+                    font-size: 14px;
+                    color: AppState.selected-entry.notes == "" ? #445566 : #c0d0e0;
+                    wrap: root.notes-expanded ? word-wrap : no-wrap;
+                    overflow: root.notes-expanded ? clip : elide;
+                }
+            }
+        }
         ViewField { label: "Оновлено"; value: AppState.selected-entry.updated-at; }
 
         Rectangle {
