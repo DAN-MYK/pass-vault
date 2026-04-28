@@ -70,6 +70,7 @@ fn main() -> Result<(), slint::PlatformError> {
             *state.session_key.lock().unwrap() = None;
             *state.all_entries.lock().unwrap() = Vec::new();
             clear_clipboard(&rt);
+            slint::quit_event_loop().ok();
             slint::CloseRequestResponse::HideWindow
         });
     }
@@ -138,8 +139,6 @@ fn perform_lock(
         app.set_is_logged_in(false);
         app.set_selected_entry_id(-1);
         app.set_error_message(SharedString::default());
-        // Mirror to AppWindow until app.slint is migrated to AppState.is-logged-in.
-        ui.set_is_locked(true);
     }
 }
 
@@ -193,8 +192,6 @@ fn register_login(
                     refill_model(&entries_model, &entries);
                     app.set_is_logged_in(true);
                     app.set_error_message(SharedString::default());
-                    // Mirror to AppWindow until app.slint is migrated.
-                    ui.set_is_locked(false);
                 }
                 Ok(Err(e)) => app.set_error_message(e.to_string().into()),
                 Err(e) => app.set_error_message(format!("internal error: {e}").into()),
