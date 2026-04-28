@@ -82,6 +82,7 @@ export component EntryDetail inherits Rectangle {
     }
 
     changed _mode-mirror => {
+        root.notes-expanded = false;
         if (root._mode-mirror == "new") {
             edit-title = "";
             edit-username = "";
