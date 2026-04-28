@@ -65,6 +65,7 @@ export component EntryDetail inherits Rectangle {
     private property <string> edit-url: "";
     private property <string> edit-password: "";
     private property <string> edit-notes: "";
+    private property <bool> notes-expanded: false;
 
     // Дзеркала глобалів — лише для `changed`-хуків (Slint не дозволяє
     // `changed AppState.x` напряму).
@@ -77,6 +78,7 @@ export component EntryDetail inherits Rectangle {
         edit-url = root._entry-mirror.url;
         edit-password = "";
         edit-notes = root._entry-mirror.notes;
+        root.notes-expanded = false;
     }
 
     changed _mode-mirror => {
